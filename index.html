@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   
+    <link rel="stylesheet" href="style.css">
+    <title>Newton Backward Interpolation</title>
+</head>
+<body>
+    <div class="container">
+    <h1>Newton Backward Interpolation Calculator</h1>
+    <form id="dataForm">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>X Value</th>
+                    <th>Y Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="number" class="x-value" step="any" required></td>
+                    <td><input type="number" class="y-value" step="any" required></td>
+                </tr>
+            </tbody>
+        </table>
+        <button type="button" id="addRowBtn">Add Row</button><br><br>
+        <label for="interpolateX">Interpolate at X:</label>
+        <input type="number" id="interpolateX" step="any" required><br><br>
+        <button type="submit">Interpolate</button>
+    </form>
+    <div id="output"></div>
+</div>
+    <script>
+        document.getElementById('addRowBtn').addEventListener('click', function() {
+            const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            const xCell = newRow.insertCell(0);
+            const yCell = newRow.insertCell(1);
+
+            xCell.innerHTML = '<input type="number" class="x-value" step="any" required>';
+            yCell.innerHTML = '<input type="number" class="y-value" step="any" required>';
+        });
+
+        document.getElementById('dataForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const xValues = Array.from(document.getElementsByClassName('x-value')).map(input => parseFloat(input.value));
+            const yValues = Array.from(document.getElementsByClassName('y-value')).map(input => parseFloat(input.value));
+            const interpolateX = parseFloat(document.getElementById('interpolateX').value);
+
+            if (xValues.length < 2 || yValues.length < 2) {
+                document.getElementById('output').textContent = 'Please enter at least two data points.';
+                return;
+            }
+
+            const points = xValues.map((x, i) => ({ x, y: yValues[i] }));
+            const { polynomial, interpolatedValue } = newtonBackwardInterpolation(points, interpolateX);
+            document.getElementById('output').textContent = `Newton Backward Interpolation Polynomial: P(x) = ${polynomial}\n\nInterpolated value at x = ${interpolateX}: P(${interpolateX}) = ${interpolatedValue}`;
+        });
+
+        function newtonBackwardInterpolation(points, x) {
+            const n = points.length;
+            const xi = points.map(p => p.x);
+            const yi = points.map(p => p.y);
+
+            let diffTable = Array.from({ length: n }, (_, i) => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                diffTable[i][0] = yi[i];
+            }
+
+            for (let j = 1; j < n; j++) {
+                for (let i = n - 1; i >= j; i--) {
+                    diffTable[i][j] = diffTable[i][j - 1] - diffTable[i - 1][j - 1];
+                }
+            }
+
+            const h = xi[1] - xi[0];
+            let polynomial = `${yi[n - 1]}`;
+            let interpolatedValue = yi[n - 1];
+            let productTerms = 1;
+
+            for (let i = 1; i < n; i++) {
+                productTerms *= (x - xi[n - i]);
+                const term = diffTable[n - 1][i] / (factorial(i) * Math.pow(h, i));
+                polynomial += ` + (${term} * ${(Array(i).fill(null).map((_, j) => `(x - ${xi[n - j - 1]})`).join(' * '))})`;
+                interpolatedValue += term * productTerms;
+            }
+
+            return { polynomial, interpolatedValue };
+        }
+
+        function factorial(num) {
+            if (num === 0) return 1;
+            return num * factorial(num - 1);
+        }
+    </script>
+</body>
+</html>
+
